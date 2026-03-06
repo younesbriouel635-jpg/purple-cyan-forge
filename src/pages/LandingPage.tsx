@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Zap, Shield, Globe, Code2, Layers, ArrowRight, Check } from "lucide-react";
+import revliskitLogo from "@/assets/revliskit-logo.png";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -52,9 +53,7 @@ const LandingPage = () => {
       <nav className="fixed top-0 w-full z-50 glass-strong border-b border-border/30">
         <div className="container mx-auto flex items-center justify-between h-16 px-6">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary-foreground" />
-            </div>
+            <img src={revliskitLogo} alt="Revliskit logo" className="w-8 h-8 rounded-lg object-contain" />
             <span className="font-display text-xl font-bold tracking-tight">Revliskit</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">

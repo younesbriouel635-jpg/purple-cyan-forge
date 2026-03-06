@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Sparkles, LayoutGrid, Layers, CreditCard, Settings, HelpCircle, LogOut } from "lucide-react";
+import { LayoutGrid, Layers, CreditCard, Settings, HelpCircle, LogOut } from "lucide-react";
+import revliskitLogo from "@/assets/revliskit-logo.png";
 
 const navItems = [
   { icon: LayoutGrid, label: "Projects", path: "/dashboard" },
@@ -22,9 +23,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
           className="flex items-center gap-2 px-5 h-12 border-b border-border cursor-pointer"
           onClick={() => navigate("/")}
         >
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-          </div>
+          <img src={revliskitLogo} alt="Revliskit logo" className="w-7 h-7 rounded-lg object-contain" />
           <span className="font-display text-base font-bold tracking-tight">Revliskit</span>
         </div>
 
