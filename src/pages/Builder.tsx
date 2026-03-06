@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Send, Bot, User, Code, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/AppLayout";
 import ReactMarkdown from "react-markdown";
-
+import LivePreview from "@/components/builder/LivePreview";
+import { useProject } from "@/hooks/useProject";
 
 interface Message {
   role: "user" | "assistant";
@@ -19,9 +21,25 @@ Format your responses using markdown:
 - Use bullet points for lists of features or steps
 - Explain what you're building before showing code
 
+IMPORTANT: When generating a component, always name the main component "App" so it can be rendered in the live preview. Use only React, no imports (React is available globally). Use Tailwind CSS classes for styling. Example:
+\`\`\`tsx
+function App() {
+  const [count, setCount] = React.useState(0);
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">Hello</h1>
+    </div>
+  );
+}
+\`\`\`
+
 Always respond as if you are actively building the app step by step.`;
 
 const Builder = () => {
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("project") || undefined;
+  const { project, createProject, saveVersion } = useProject(projectId);
+
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hi! I'm **Revliskit AI**. Describe the app you want to build, and I'll generate it for you. 🚀" },
   ]);
@@ -35,7 +53,19 @@ const Builder = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const streamChat = useCallback(async (allMessages: Message[]) => {
+  const extractAndSaveCode = useCallback(
+    async (content: string, currentProjectId?: string) => {
+      const codeMatch = content.match(/```(?:tsx?|jsx?|typescript|javascript)\n([\s\S]*?)```/);
+      if (codeMatch) {
+        const code = codeMatch[1];
+        setGeneratedCode(code);
+        await saveVersion(code, currentProjectId);
+      }
+    },
+    [saveVersion]
+  );
+
+  const streamChat = useCallback(async (allMessages: Message[], currentProjectId?: string) => {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-chat`;
 
     const apiMessages = [
@@ -94,7 +124,7 @@ const Builder = () => {
               return [...prev, { role: "assistant", content: assistantContent }];
             });
 
-            // Extract code blocks for the code tab
+            // Live-update the preview with latest code
             const codeMatch = assistantContent.match(/```(?:tsx?|jsx?|typescript|javascript)\n([\s\S]*?)```/);
             if (codeMatch) setGeneratedCode(codeMatch[1]);
           }
@@ -104,7 +134,10 @@ const Builder = () => {
         }
       }
     }
-  }, []);
+
+    // Save the final version after streaming completes
+    await extractAndSaveCode(assistantContent, currentProjectId);
+  }, [extractAndSaveCode]);
 
   const handleSend = async () => {
     if (!input.trim() || isGenerating) return;
@@ -115,7 +148,13 @@ const Builder = () => {
     setIsGenerating(true);
 
     try {
-      await streamChat(newMessages);
+      // Auto-create project on first message if none exists
+      let pid = project?.id;
+      if (!pid) {
+        const newProject = await createProject(userMsg.slice(0, 50));
+        pid = newProject.id;
+      }
+      await streamChat(newMessages, pid);
     } catch (e) {
       console.error("Chat error:", e);
       const errorMsg = e instanceof Error ? e.message : "Something went wrong";
@@ -133,8 +172,13 @@ const Builder = () => {
       <div className="flex h-[calc(100vh-3rem)] overflow-hidden">
         {/* Chat Panel */}
         <div className="w-1/2 border-r border-border flex flex-col">
-          <div className="p-4 border-b border-border">
+          <div className="p-4 border-b border-border flex items-center justify-between">
             <h2 className="font-display font-semibold text-sm">AI Builder</h2>
+            {project && (
+              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                {project.name}
+              </span>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -246,13 +290,7 @@ const Builder = () => {
           </div>
           <div className="flex-1 bg-muted/30 flex items-center justify-center overflow-hidden">
             {activeTab === "preview" ? (
-              <div className="text-center p-8">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Eye className="w-8 h-8 text-primary/40" />
-                </div>
-                <p className="text-sm text-muted-foreground">Live preview will appear here</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">Start by describing your app in the chat</p>
-              </div>
+              <LivePreview code={generatedCode} />
             ) : (
               <div className="w-full h-full p-6 font-mono text-xs text-foreground/80 overflow-auto">
                 <pre className="whitespace-pre-wrap">
