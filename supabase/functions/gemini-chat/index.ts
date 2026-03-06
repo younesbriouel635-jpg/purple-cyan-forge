@@ -41,7 +41,7 @@ serve(async (req) => {
       geminiBody.systemInstruction = { parts: [{ text: systemMsg.content }] };
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
 
     const response = await fetch(url, {
       method: "POST",
