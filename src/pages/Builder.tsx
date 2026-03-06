@@ -1,50 +1,131 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Send, Bot, User, Code, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/AppLayout";
+import ReactMarkdown from "react-markdown";
+
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
-const simulatedResponses = [
-  "I'll create a modern React application for you. Let me start by setting up the project structure...",
-  "Setting up the database schema with user authentication, profiles, and the core data models...",
-  "Building the UI components: Navigation, Dashboard, and Settings pages with responsive design...",
-  "Adding API routes and connecting the frontend to the backend. Almost done!",
-  "✅ Your app is ready! I've built:\n- Authentication (login/signup)\n- Dashboard with analytics\n- Settings page\n- Responsive navigation\n\nYou can see the preview on the right.",
-];
+const SYSTEM_PROMPT = `You are Revliskit AI, a world-class app generation assistant. When a user describes an app, you generate clean, production-ready React + TypeScript code with Tailwind CSS. 
+
+Format your responses using markdown:
+- Use code blocks with language tags for code snippets
+- Use headings to organize sections
+- Use bullet points for lists of features or steps
+- Explain what you're building before showing code
+
+Always respond as if you are actively building the app step by step.`;
 
 const Builder = () => {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hi! I'm Revliskit AI. Describe the app you want to build, and I'll generate it for you." },
+    { role: "assistant", content: "Hi! I'm **Revliskit AI**. Describe the app you want to build, and I'll generate it for you. 🚀" },
   ]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
-  const [responseIndex, setResponseIndex] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
+  const [generatedCode, setGeneratedCode] = useState("");
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const streamChat = useCallback(async (allMessages: Message[]) => {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-chat`;
+
+    const apiMessages = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...allMessages.map((m) => ({ role: m.role, content: m.content })),
+    ];
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages: apiMessages }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: "Request failed" }));
+      throw new Error(err.error || `HTTP ${resp.status}`);
+    }
+
+    if (!resp.body) throw new Error("No response body");
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let assistantContent = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let newlineIdx: number;
+      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+        let line = buffer.slice(0, newlineIdx);
+        buffer = buffer.slice(newlineIdx + 1);
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (!line.startsWith("data: ")) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") break;
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            assistantContent += content;
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.role === "assistant" && prev.length > 1) {
+                return prev.map((m, i) =>
+                  i === prev.length - 1 ? { ...m, content: assistantContent } : m
+                );
+              }
+              return [...prev, { role: "assistant", content: assistantContent }];
+            });
+
+            // Extract code blocks for the code tab
+            const codeMatch = assistantContent.match(/```(?:tsx?|jsx?|typescript|javascript)\n([\s\S]*?)```/);
+            if (codeMatch) setGeneratedCode(codeMatch[1]);
+          }
+        } catch {
+          buffer = line + "\n" + buffer;
+          break;
+        }
+      }
+    }
+  }, []);
+
   const handleSend = async () => {
     if (!input.trim() || isGenerating) return;
     const userMsg = input.trim();
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+    const newMessages: Message[] = [...messages, { role: "user", content: userMsg }];
+    setMessages(newMessages);
     setIsGenerating(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const resp = simulatedResponses[responseIndex % simulatedResponses.length];
-      setMessages((prev) => [...prev, { role: "assistant", content: resp }]);
-      setResponseIndex((i) => i + 1);
+    try {
+      await streamChat(newMessages);
+    } catch (e) {
+      console.error("Chat error:", e);
+      const errorMsg = e instanceof Error ? e.message : "Something went wrong";
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `⚠️ **Error:** ${errorMsg}` },
+      ]);
+    } finally {
       setIsGenerating(false);
-    }, 2000 + Math.random() * 1500);
+    }
   };
 
   return (
@@ -67,12 +148,49 @@ const Builder = () => {
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${msg.role === "assistant" ? "bg-primary/20" : "bg-secondary/20"}`}>
                   {msg.role === "assistant" ? <Bot className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-secondary" />}
                 </div>
-                <div className={`glass px-4 py-3 max-w-[80%] text-sm leading-relaxed whitespace-pre-wrap ${msg.role === "user" ? "bg-primary/10 border-primary/20" : ""}`}>
-                  {msg.content}
+                <div className={`glass px-4 py-3 max-w-[80%] text-sm leading-relaxed ${msg.role === "user" ? "bg-primary/10 border-primary/20" : ""}`}>
+                  <ReactMarkdown
+                    components={{
+                      code({ className, children, ...props }) {
+                        const isInline = !className;
+                        return isInline ? (
+                          <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono" {...props}>
+                            {children}
+                          </code>
+                        ) : (
+                          <pre className="bg-background/80 border border-border rounded-lg p-3 my-2 overflow-x-auto">
+                            <code className="text-xs font-mono text-foreground" {...props}>
+                              {children}
+                            </code>
+                          </pre>
+                        );
+                      },
+                      p({ children }) {
+                        return <p className="mb-2 last:mb-0">{children}</p>;
+                      },
+                      h1({ children }) {
+                        return <h1 className="text-lg font-bold mb-2">{children}</h1>;
+                      },
+                      h2({ children }) {
+                        return <h2 className="text-base font-semibold mb-2">{children}</h2>;
+                      },
+                      h3({ children }) {
+                        return <h3 className="text-sm font-semibold mb-1">{children}</h3>;
+                      },
+                      ul({ children }) {
+                        return <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>;
+                      },
+                      ol({ children }) {
+                        return <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>;
+                      },
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
               </motion.div>
             ))}
-            {isGenerating && (
+            {isGenerating && messages[messages.length - 1]?.role === "user" && (
               <div className="flex gap-3">
                 <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
                   <Bot className="w-4 h-4 text-primary" />
@@ -99,7 +217,7 @@ const Builder = () => {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
                 placeholder="Describe what you want to build..."
                 className="flex-1 bg-transparent border-none outline-none text-sm px-3 py-2 placeholder:text-muted-foreground/60"
               />
@@ -126,7 +244,7 @@ const Builder = () => {
               <Code className="w-3.5 h-3.5" /> Code
             </button>
           </div>
-          <div className="flex-1 bg-muted/30 flex items-center justify-center">
+          <div className="flex-1 bg-muted/30 flex items-center justify-center overflow-hidden">
             {activeTab === "preview" ? (
               <div className="text-center p-8">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -136,8 +254,10 @@ const Builder = () => {
                 <p className="text-xs text-muted-foreground/60 mt-1">Start by describing your app in the chat</p>
               </div>
             ) : (
-              <div className="w-full h-full p-6 font-mono text-xs text-muted-foreground overflow-auto">
-                <pre className="text-primary/60">{`// Generated code will appear here\n\nimport React from 'react';\n\nconst App = () => {\n  return (\n    <div>\n      <h1>Your App</h1>\n    </div>\n  );\n};\n\nexport default App;`}</pre>
+              <div className="w-full h-full p-6 font-mono text-xs text-foreground/80 overflow-auto">
+                <pre className="whitespace-pre-wrap">
+                  {generatedCode || `// Generated code will appear here\n// Send a message to start building your app`}
+                </pre>
               </div>
             )}
           </div>
