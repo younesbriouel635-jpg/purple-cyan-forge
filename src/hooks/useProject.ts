@@ -20,13 +20,27 @@ export function useProject(projectId?: string) {
         .then(({ data }) => {
           if (data) setProject(data);
         });
+
+      // Load latest version count
+      supabase
+        .from("project_versions")
+        .select("version_number")
+        .eq("project_id", projectId)
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (data?.[0]) setVersionCount(data[0].version_number);
+        });
     }
   }, [projectId]);
 
   const createProject = useCallback(async (name: string = "Untitled Project") => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
     const { data, error } = await supabase
       .from("projects")
-      .insert({ name })
+      .insert({ name, user_id: user.id })
       .select("id, name")
       .single();
     if (error) throw error;
@@ -39,11 +53,15 @@ export function useProject(projectId?: string) {
       const pid = currentProjectId || project?.id;
       if (!pid || !code.trim()) return;
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const nextVersion = versionCount + 1;
       const { error } = await supabase.from("project_versions").insert({
         project_id: pid,
         code,
         version_number: nextVersion,
+        user_id: user.id,
       });
       if (error) {
         console.error("Failed to save version:", error);
@@ -51,7 +69,6 @@ export function useProject(projectId?: string) {
       }
       setVersionCount(nextVersion);
 
-      // Update project timestamp
       await supabase
         .from("projects")
         .update({ updated_at: new Date().toISOString() })

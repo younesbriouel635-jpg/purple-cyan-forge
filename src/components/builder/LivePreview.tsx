@@ -1,15 +1,28 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect, useCallback } from "react";
 import { Eye } from "lucide-react";
 
 interface LivePreviewProps {
   code: string;
+  onError?: (error: string) => void;
 }
 
-const LivePreview = ({ code }: LivePreviewProps) => {
+const LivePreview = ({ code, onError }: LivePreviewProps) => {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Listen for error messages from the sandboxed iframe
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "preview-error" && onError) {
+        onError(e.data.message);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [onError]);
+
   const srcdoc = useMemo(() => {
     if (!code.trim()) return "";
 
-    // Build a standalone HTML page that renders the React component
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -31,31 +44,26 @@ const LivePreview = ({ code }: LivePreviewProps) => {
     try {
       ${code}
 
-      // Try to find the default export or the last defined component
-      const componentNames = Object.keys(window).filter(k => 
-        typeof window[k] === 'function' && /^[A-Z]/.test(k)
-      );
-      
-      // Use the component defined in the code
       const root = ReactDOM.createRoot(document.getElementById('root'));
-      
-      // Try rendering - the code should define and render a component
       if (typeof App !== 'undefined') {
         root.render(React.createElement(App));
       } else if (typeof Component !== 'undefined') {
         root.render(React.createElement(Component));
       } else {
-        // Try to find any PascalCase function component
-        const lastComponent = componentNames[componentNames.length - 1];
-        if (lastComponent) {
-          root.render(React.createElement(window[lastComponent]));
-        } else {
-          document.getElementById('root').innerHTML = '<div class="error-display">No component found to render. Make sure your code exports a component named App or Component.</div>';
-        }
+        const componentNames = Object.keys(window).filter(k => typeof window[k] === 'function' && /^[A-Z]/.test(k));
+        const last = componentNames[componentNames.length - 1];
+        if (last) root.render(React.createElement(window[last]));
+        else document.getElementById('root').innerHTML = '<div class="error-display">No component found. Name your component App.</div>';
       }
     } catch (e) {
       document.getElementById('root').innerHTML = '<div class="error-display">Error: ' + e.message + '</div>';
+      window.parent.postMessage({ type: 'preview-error', message: e.message }, '*');
     }
+  </script>
+  <script>
+    window.onerror = function(msg) {
+      window.parent.postMessage({ type: 'preview-error', message: String(msg) }, '*');
+    };
   </script>
 </body>
 </html>`;
@@ -75,9 +83,10 @@ const LivePreview = ({ code }: LivePreviewProps) => {
 
   return (
     <iframe
+      ref={iframeRef}
       srcDoc={srcdoc}
       className="w-full h-full border-0 bg-white rounded-lg"
-      sandbox="allow-scripts allow-same-origin"
+      sandbox="allow-scripts allow-forms allow-popups"
       title="Live Preview"
     />
   );
