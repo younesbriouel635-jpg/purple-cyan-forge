@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Send, Bot, User, Code, Eye, Loader2 } from "lucide-react";
+import { Send, Bot, User, Code, Eye, Loader2, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/AppLayout";
 import ReactMarkdown from "react-markdown";
 import LivePreview from "@/components/builder/LivePreview";
+import CodeEditor from "@/components/builder/CodeEditor";
+import VersionSidebar from "@/components/builder/VersionSidebar";
 import { useProject } from "@/hooks/useProject";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
@@ -21,7 +24,7 @@ Format your responses using markdown:
 - Use bullet points for lists of features or steps
 - Explain what you're building before showing code
 
-IMPORTANT: When generating a component, always name the main component "App" so it can be rendered in the live preview. Use only React, no imports (React is available globally). Use Tailwind CSS classes for styling. Example:
+IMPORTANT: When generating a component, always name the main component "App" so it can be rendered in the live preview. Use only React, no imports (React is available globally). Use Tailwind CSS classes for styling. When updating existing code, provide the FULL updated component — do not use partial diffs. Example:
 \`\`\`tsx
 function App() {
   const [count, setCount] = React.useState(0);
@@ -35,34 +38,43 @@ function App() {
 
 Always respond as if you are actively building the app step by step.`;
 
+const FIXER_PROMPT = (error: string, code: string) =>
+  `The following React component crashed with this runtime error:\n\nError: ${error}\n\nCode:\n\`\`\`tsx\n${code}\n\`\`\`\n\nFix the error and return the COMPLETE corrected component. Keep the same functionality. Name it "App".`;
+
 const Builder = () => {
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("project") || undefined;
-  const { project, createProject, saveVersion } = useProject(projectId);
+  const { project, createProject, saveVersion, versionCount } = useProject(projectId);
 
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hi! I'm **Revliskit AI**. Describe the app you want to build, and I'll generate it for you. 🚀" },
   ]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
   const [generatedCode, setGeneratedCode] = useState("");
+  const fixAttempts = useRef(0);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const extractCode = useCallback((content: string): string | null => {
+    const match = content.match(/```(?:tsx?|jsx?|typescript|javascript)\n([\s\S]*?)```/);
+    return match ? match[1] : null;
+  }, []);
+
   const extractAndSaveCode = useCallback(
     async (content: string, currentProjectId?: string) => {
-      const codeMatch = content.match(/```(?:tsx?|jsx?|typescript|javascript)\n([\s\S]*?)```/);
-      if (codeMatch) {
-        const code = codeMatch[1];
+      const code = extractCode(content);
+      if (code) {
         setGeneratedCode(code);
         await saveVersion(code, currentProjectId);
       }
     },
-    [saveVersion]
+    [saveVersion, extractCode]
   );
 
   const streamChat = useCallback(async (allMessages: Message[], currentProjectId?: string) => {
@@ -124,9 +136,8 @@ const Builder = () => {
               return [...prev, { role: "assistant", content: assistantContent }];
             });
 
-            // Live-update the preview with latest code
-            const codeMatch = assistantContent.match(/```(?:tsx?|jsx?|typescript|javascript)\n([\s\S]*?)```/);
-            if (codeMatch) setGeneratedCode(codeMatch[1]);
+            const codeMatch = extractCode(assistantContent);
+            if (codeMatch) setGeneratedCode(codeMatch);
           }
         } catch {
           buffer = line + "\n" + buffer;
@@ -135,20 +146,67 @@ const Builder = () => {
       }
     }
 
-    // Save the final version after streaming completes
     await extractAndSaveCode(assistantContent, currentProjectId);
-  }, [extractAndSaveCode]);
+    return assistantContent;
+  }, [extractAndSaveCode, extractCode]);
+
+  // Self-healing: auto-fix runtime errors from the preview
+  const handlePreviewError = useCallback(
+    async (error: string) => {
+      if (isFixing || isGenerating || !generatedCode || fixAttempts.current >= 2) return;
+      fixAttempts.current += 1;
+      setIsFixing(true);
+
+      toast.info("🔧 Auto-fixing runtime error...");
+
+      const fixerMsg: Message = { role: "user", content: FIXER_PROMPT(error, generatedCode) };
+      const newMessages = [...messages, fixerMsg];
+      setMessages((prev) => [...prev, { role: "assistant", content: "🔧 *Detecting error and auto-repairing...*" }]);
+
+      try {
+        const pid = project?.id;
+        await streamChat(newMessages, pid);
+        fixAttempts.current = 0;
+        toast.success("✅ Error auto-fixed!");
+      } catch {
+        toast.error("Auto-fix failed");
+      } finally {
+        setIsFixing(false);
+      }
+    },
+    [isFixing, isGenerating, generatedCode, messages, project?.id, streamChat]
+  );
+
+  // Manual code edit auto-save
+  const handleCodeChange = useCallback(
+    async (newCode: string) => {
+      setGeneratedCode(newCode);
+      if (project?.id) {
+        await saveVersion(newCode, project.id);
+        toast.success("Code saved", { duration: 1500 });
+      }
+    },
+    [project?.id, saveVersion]
+  );
+
+  // Version restore
+  const handleRestore = useCallback((code: string, _versionNumber: number) => {
+    setGeneratedCode(code);
+    fixAttempts.current = 0;
+    setActiveTab("preview");
+    toast.success(`Restored to v${_versionNumber}`);
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isGenerating) return;
     const userMsg = input.trim();
     setInput("");
+    fixAttempts.current = 0;
     const newMessages: Message[] = [...messages, { role: "user", content: userMsg }];
     setMessages(newMessages);
     setIsGenerating(true);
 
     try {
-      // Auto-create project on first message if none exists
       let pid = project?.id;
       if (!pid) {
         const newProject = await createProject(userMsg.slice(0, 50));
@@ -174,11 +232,18 @@ const Builder = () => {
         <div className="w-1/2 border-r border-border flex flex-col">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h2 className="font-display font-semibold text-sm">AI Builder</h2>
-            {project && (
-              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                {project.name}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {isFixing && (
+                <span className="flex items-center gap-1 text-xs text-primary">
+                  <Wrench className="w-3 h-3 animate-spin" /> Fixing...
+                </span>
+              )}
+              {project && (
+                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {project.name}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -209,24 +274,12 @@ const Builder = () => {
                           </pre>
                         );
                       },
-                      p({ children }) {
-                        return <p className="mb-2 last:mb-0">{children}</p>;
-                      },
-                      h1({ children }) {
-                        return <h1 className="text-lg font-bold mb-2">{children}</h1>;
-                      },
-                      h2({ children }) {
-                        return <h2 className="text-base font-semibold mb-2">{children}</h2>;
-                      },
-                      h3({ children }) {
-                        return <h3 className="text-sm font-semibold mb-1">{children}</h3>;
-                      },
-                      ul({ children }) {
-                        return <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>;
-                      },
-                      ol({ children }) {
-                        return <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>;
-                      },
+                      p({ children }) { return <p className="mb-2 last:mb-0">{children}</p>; },
+                      h1({ children }) { return <h1 className="text-lg font-bold mb-2">{children}</h1>; },
+                      h2({ children }) { return <h2 className="text-base font-semibold mb-2">{children}</h2>; },
+                      h3({ children }) { return <h3 className="text-sm font-semibold mb-1">{children}</h3>; },
+                      ul({ children }) { return <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>; },
+                      ol({ children }) { return <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>; },
                     }}
                   >
                     {msg.content}
@@ -265,7 +318,7 @@ const Builder = () => {
                 placeholder="Describe what you want to build..."
                 className="flex-1 bg-transparent border-none outline-none text-sm px-3 py-2 placeholder:text-muted-foreground/60"
               />
-              <Button size="sm" onClick={handleSend} disabled={isGenerating} className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground">
+              <Button size="sm" onClick={handleSend} disabled={isGenerating || isFixing} className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground">
                 {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             </div>
@@ -273,7 +326,7 @@ const Builder = () => {
         </div>
 
         {/* Preview Panel */}
-        <div className="w-1/2 flex flex-col">
+        <div className="flex-1 flex flex-col relative">
           <div className="p-4 border-b border-border flex items-center gap-1">
             <button
               onClick={() => setActiveTab("preview")}
@@ -288,16 +341,19 @@ const Builder = () => {
               <Code className="w-3.5 h-3.5" /> Code
             </button>
           </div>
-          <div className="flex-1 bg-muted/30 flex items-center justify-center overflow-hidden">
-            {activeTab === "preview" ? (
-              <LivePreview code={generatedCode} />
-            ) : (
-              <div className="w-full h-full p-6 font-mono text-xs text-foreground/80 overflow-auto">
-                <pre className="whitespace-pre-wrap">
-                  {generatedCode || `// Generated code will appear here\n// Send a message to start building your app`}
-                </pre>
-              </div>
-            )}
+          <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 bg-muted/30 flex items-center justify-center overflow-hidden">
+              {activeTab === "preview" ? (
+                <LivePreview code={generatedCode} onError={handlePreviewError} />
+              ) : (
+                <CodeEditor code={generatedCode} onChange={handleCodeChange} />
+              )}
+            </div>
+            <VersionSidebar
+              projectId={project?.id}
+              onRestore={handleRestore}
+              currentVersion={versionCount}
+            />
           </div>
         </div>
       </div>
