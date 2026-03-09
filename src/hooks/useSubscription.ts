@@ -15,8 +15,8 @@ export interface Subscription {
 }
 
 const TIER_LIMITS: Record<SubscriptionTier, number> = {
-  starter: 2,
-  pro: 5,
+  basic: 2,
+  professional: 5,
   enterprise: 10,
 };
 
