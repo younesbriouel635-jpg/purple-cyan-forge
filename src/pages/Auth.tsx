@@ -5,7 +5,7 @@ import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import revliskitLogo from "@/assets/revliskit-logo.png";
+import revliksLogo from "@/assets/revliks-logo.png";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
