@@ -29,24 +29,24 @@ const features = [
 
 const pricingTiers = [
   {
-    name: "Starter",
+    name: "Basic",
     price: "$50",
     period: "/month",
     desc: "For individual creators getting started",
     features: ["2 app projects", "Basic AI generation", "Community support", "Shared hosting"],
     cta: "Get Started",
     popular: false,
-    checkoutUrl: "#checkout-starter",
+    checkoutUrl: "#checkout-basic",
   },
   {
-    name: "Pro",
+    name: "Professional",
     price: "$100",
     period: "/month",
     desc: "For serious builders who need more power",
     features: ["5 app projects", "Advanced AI models", "Priority support", "Custom domain support", "Team collaboration", "API access"],
     cta: "Upgrade to Pro",
     popular: true,
-    checkoutUrl: "#checkout-pro",
+    checkoutUrl: "#checkout-professional",
   },
   {
     name: "Enterprise",

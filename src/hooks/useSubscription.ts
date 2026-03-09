@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
-export type SubscriptionTier = "starter" | "pro" | "enterprise";
+export type SubscriptionTier = "basic" | "professional" | "enterprise";
 
 export interface Subscription {
   id: string;
@@ -15,8 +15,8 @@ export interface Subscription {
 }
 
 const TIER_LIMITS: Record<SubscriptionTier, number> = {
-  starter: 2,
-  pro: 5,
+  basic: 2,
+  professional: 5,
   enterprise: 10,
 };
 
@@ -56,7 +56,7 @@ export function useSubscription() {
 
   const tierLabel = subscription?.tier
     ? subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)
-    : "Starter";
+    : "Basic";
 
   const appLimit = subscription ? TIER_LIMITS[subscription.tier] : 2;
 
