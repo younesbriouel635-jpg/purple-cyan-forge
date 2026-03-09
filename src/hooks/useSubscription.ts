@@ -56,7 +56,7 @@ export function useSubscription() {
 
   const tierLabel = subscription?.tier
     ? subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)
-    : "Starter";
+    : "Basic";
 
   const appLimit = subscription ? TIER_LIMITS[subscription.tier] : 2;
 
