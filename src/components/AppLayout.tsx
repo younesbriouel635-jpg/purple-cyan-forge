@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LayoutGrid, Layers, CreditCard, Settings, HelpCircle, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import revliskitLogo from "@/assets/revliskit-logo.png";
+import revliksLogo from "@/assets/revliks-logo.png";
 
 const navItems = [
   { icon: LayoutGrid, label: "Projects", path: "/dashboard" },
