@@ -16,7 +16,7 @@ interface Message {
   content: string;
 }
 
-const SYSTEM_PROMPT = `You are Revliskit AI, a world-class app generation assistant. When a user describes an app, you generate clean, production-ready React + TypeScript code with Tailwind CSS. 
+const SYSTEM_PROMPT = `You are Revliks AI, a world-class app generation assistant. When a user describes an app, you generate clean, production-ready React + TypeScript code with Tailwind CSS. 
 
 Format your responses using markdown:
 - Use code blocks with language tags for code snippets
