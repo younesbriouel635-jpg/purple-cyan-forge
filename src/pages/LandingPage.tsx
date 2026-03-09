@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Zap, Shield, Globe, Code2, Layers, ArrowRight, Check } from "lucide-react";
-import revliskitLogo from "@/assets/revliskit-logo.png";
+import revliksLogo from "@/assets/revliskit-logo.png";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
