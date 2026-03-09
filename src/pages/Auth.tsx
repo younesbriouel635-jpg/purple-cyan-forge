@@ -41,8 +41,8 @@ const Auth = () => {
         className="w-full max-w-sm"
       >
         <div className="flex items-center gap-2 justify-center mb-8">
-          <img src={revliskitLogo} alt="Revliskit" className="w-8 h-8 rounded-lg" />
-          <span className="font-display text-xl font-bold">Revliskit</span>
+          <img src={revliksLogo} alt="Revliks" className="w-8 h-8 rounded-lg" />
+          <span className="font-display text-xl font-bold">Revliks</span>
         </div>
 
         <div className="glass p-6">

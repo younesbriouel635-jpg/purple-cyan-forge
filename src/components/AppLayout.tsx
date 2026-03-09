@@ -29,8 +29,8 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
           className="flex items-center gap-2 px-5 h-12 border-b border-border cursor-pointer"
           onClick={() => navigate("/")}
         >
-          <img src={revliskitLogo} alt="Revliskit logo" className="w-7 h-7 rounded-lg object-contain" />
-          <span className="font-display text-base font-bold tracking-tight">Revliskit</span>
+          <img src={revliksLogo} alt="Revliks logo" className="w-7 h-7 rounded-lg object-contain" />
+          <span className="font-display text-base font-bold tracking-tight">Revliks</span>
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1">

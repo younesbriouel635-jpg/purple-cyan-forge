@@ -47,7 +47,7 @@ const Builder = () => {
   const { project, createProject, saveVersion, versionCount } = useProject(projectId);
 
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hi! I'm **Revliskit AI**. Describe the app you want to build, and I'll generate it for you. 🚀" },
+    { role: "assistant", content: "Hi! I'm **Revliks AI**. Describe the app you want to build, and I'll generate it for you. 🚀" },
   ]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
