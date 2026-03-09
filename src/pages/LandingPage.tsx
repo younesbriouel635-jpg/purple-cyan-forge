@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Zap, Shield, Globe, Code2, Layers, ArrowRight, Check } from "lucide-react";
-import revliksLogo from "@/assets/revliskit-logo.png";
+import revliksLogo from "@/assets/revliks-logo.png";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -28,9 +28,36 @@ const features = [
 ];
 
 const pricingTiers = [
-  { name: "Free", price: "$0", period: "/forever", desc: "Perfect for trying things out", features: ["1 project", "Basic AI generation", "Community support", "Shared hosting"], cta: "Get Started", popular: false },
-  { name: "Pro", price: "$29", period: "/month", desc: "For serious builders", features: ["Unlimited projects", "Advanced AI models", "Priority support", "Custom domains", "Team collaboration", "API access"], cta: "Start Pro Trial", popular: true },
-  { name: "Agency", price: "$99", period: "/month", desc: "For teams at scale", features: ["Everything in Pro", "White-label builds", "Dedicated infra", "SLA guarantee", "Custom integrations", "Priority queue"], cta: "Contact Sales", popular: false },
+  {
+    name: "Starter",
+    price: "$50",
+    period: "/month",
+    desc: "For individual creators getting started",
+    features: ["2 app projects", "Basic AI generation", "Community support", "Shared hosting"],
+    cta: "Get Started",
+    popular: false,
+    checkoutUrl: "#checkout-starter",
+  },
+  {
+    name: "Pro",
+    price: "$100",
+    period: "/month",
+    desc: "For serious builders who need more power",
+    features: ["5 app projects", "Advanced AI models", "Priority support", "Custom domain support", "Team collaboration", "API access"],
+    cta: "Upgrade to Pro",
+    popular: true,
+    checkoutUrl: "#checkout-pro",
+  },
+  {
+    name: "Enterprise",
+    price: "$200",
+    period: "/month",
+    desc: "For teams and agencies at scale",
+    features: ["10 app projects", "Elite AI models", "Dedicated support", "Custom integrations", "SLA guarantee", "White-label builds"],
+    cta: "Contact Sales",
+    popular: false,
+    checkoutUrl: "#checkout-enterprise",
+  },
 ];
 
 const LandingPage = () => {
@@ -43,7 +70,7 @@ const LandingPage = () => {
     setIsThinking(true);
     setTimeout(() => {
       setIsThinking(false);
-      navigate("/builder");
+      navigate("/auth");
     }, 3000);
   };
 
@@ -54,16 +81,15 @@ const LandingPage = () => {
         <div className="container mx-auto flex items-center justify-between h-16 px-6">
           <div className="flex items-center gap-2">
             <img src={revliksLogo} alt="Revliks logo" className="w-8 h-8 rounded-lg object-contain" />
-            <span className="font-display text-xl font-bold tracking-tight">Revliskit</span>
+            <span className="font-display text-xl font-bold tracking-tight">Revliks</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
-            <a href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</a>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>Sign in</Button>
-            <Button size="sm" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground" onClick={() => navigate("/dashboard")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>Sign in</Button>
+            <Button size="sm" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground" onClick={() => navigate("/auth")}>
               Get Started
             </Button>
           </div>
@@ -72,7 +98,6 @@ const LandingPage = () => {
 
       {/* Hero */}
       <section className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background effects */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full bg-primary/10 blur-[120px]" />
           <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] rounded-full bg-secondary/8 blur-[100px]" />
@@ -94,7 +119,7 @@ const LandingPage = () => {
               <span className="gradient-text block">a single prompt.</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-12">
-              Describe your idea, and Revliskit transforms it into a fully functional, production-ready application in seconds.
+              Describe your idea, and Revliks transforms it into a fully functional, production-ready application in seconds.
             </p>
           </motion.div>
 
@@ -183,7 +208,7 @@ const LandingPage = () => {
             <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
               Simple, transparent <span className="gradient-text">pricing</span>
             </h2>
-            <p className="text-muted-foreground">Start free. Scale when you're ready.</p>
+            <p className="text-muted-foreground">Choose the plan that fits your ambition.</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -210,6 +235,7 @@ const LandingPage = () => {
                 <Button
                   className={`w-full mb-6 ${tier.popular ? "bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground" : ""}`}
                   variant={tier.popular ? "default" : "outline"}
+                  onClick={() => navigate("/auth")}
                 >
                   {tier.cta}
                 </Button>
@@ -229,8 +255,12 @@ const LandingPage = () => {
 
       {/* Footer */}
       <footer className="border-t border-border/30 py-12">
-        <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p>© 2026 Revliskit. Build the future with AI.</p>
+        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+          <p>© 2026 Revliks. Build the future with AI.</p>
+          <div className="flex items-center gap-6">
+            <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+          </div>
         </div>
       </footer>
     </div>

@@ -16,7 +16,7 @@ interface Message {
   content: string;
 }
 
-const SYSTEM_PROMPT = `You are Revliskit AI, a world-class app generation assistant. When a user describes an app, you generate clean, production-ready React + TypeScript code with Tailwind CSS. 
+const SYSTEM_PROMPT = `You are Revliks AI, a world-class app generation assistant. When a user describes an app, you generate clean, production-ready React + TypeScript code with Tailwind CSS. 
 
 Format your responses using markdown:
 - Use code blocks with language tags for code snippets
@@ -47,7 +47,7 @@ const Builder = () => {
   const { project, createProject, saveVersion, versionCount } = useProject(projectId);
 
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hi! I'm **Revliskit AI**. Describe the app you want to build, and I'll generate it for you. 🚀" },
+    { role: "assistant", content: "Hi! I'm **Revliks AI**. Describe the app you want to build, and I'll generate it for you. 🚀" },
   ]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);

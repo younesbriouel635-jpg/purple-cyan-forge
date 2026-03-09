@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LayoutGrid, Layers, CreditCard, Settings, HelpCircle, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import revliskitLogo from "@/assets/revliskit-logo.png";
+import revliksLogo from "@/assets/revliks-logo.png";
 
 const navItems = [
   { icon: LayoutGrid, label: "Projects", path: "/dashboard" },
@@ -29,8 +29,8 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
           className="flex items-center gap-2 px-5 h-12 border-b border-border cursor-pointer"
           onClick={() => navigate("/")}
         >
-          <img src={revliskitLogo} alt="Revliskit logo" className="w-7 h-7 rounded-lg object-contain" />
-          <span className="font-display text-base font-bold tracking-tight">Revliskit</span>
+          <img src={revliksLogo} alt="Revliks logo" className="w-7 h-7 rounded-lg object-contain" />
+          <span className="font-display text-base font-bold tracking-tight">Revliks</span>
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1">
@@ -53,11 +53,17 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
 
         <div className="px-3 pb-4">
           <div className="glass rounded-lg p-3 mb-3">
-            <p className="text-xs font-medium mb-1">Free Plan</p>
-            <p className="text-xs text-muted-foreground">1 of 1 project used</p>
+            <p className="text-xs font-medium mb-1">Starter Plan</p>
+            <p className="text-xs text-muted-foreground">$50/mo · 2 apps</p>
             <div className="w-full h-1.5 rounded-full bg-muted mt-2">
               <div className="w-full h-full rounded-full bg-gradient-to-r from-primary to-secondary" />
             </div>
+            <button
+              onClick={() => window.open("#checkout-pro", "_blank")}
+              className="w-full mt-2 text-xs text-primary hover:underline"
+            >
+              Upgrade to Pro →
+            </button>
           </div>
           <button
             onClick={handleSignOut}
