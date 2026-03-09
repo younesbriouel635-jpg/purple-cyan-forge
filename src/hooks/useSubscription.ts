@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
-export type SubscriptionTier = "starter" | "pro" | "enterprise";
+export type SubscriptionTier = "basic" | "professional" | "enterprise";
 
 export interface Subscription {
   id: string;
