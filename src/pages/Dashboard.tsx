@@ -32,7 +32,7 @@ const Dashboard = () => {
             <p className="text-sm text-muted-foreground mt-1">{projects.length} projects</p>
           </div>
           <Button
-            onClick={() => navigate("/builder")}
+            onClick={() => navigate("/new-project")}
             className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground"
           >
             <Plus className="w-4 h-4 mr-2" />
