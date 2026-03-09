@@ -7,6 +7,7 @@ import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Builder from "./pages/Builder";
 import Auth from "./pages/Auth";
+import NewProject from "./pages/NewProject";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/new-project" element={<ProtectedRoute><NewProject /></ProtectedRoute>} />
           <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

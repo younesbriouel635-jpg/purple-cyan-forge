@@ -70,7 +70,7 @@ const LandingPage = () => {
     setIsThinking(true);
     setTimeout(() => {
       setIsThinking(false);
-      navigate("/auth");
+      navigate(`/new-project?idea=${encodeURIComponent(idea.trim())}`);
     }, 3000);
   };
 
