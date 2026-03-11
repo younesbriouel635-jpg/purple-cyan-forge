@@ -16,27 +16,8 @@ interface Message {
   content: string;
 }
 
-const SYSTEM_PROMPT = `You are Revliks AI, a world-class app generation assistant. When a user describes an app, you generate clean, production-ready React + TypeScript code with Tailwind CSS. 
-
-Format your responses using markdown:
-- Use code blocks with language tags for code snippets
-- Use headings to organize sections
-- Use bullet points for lists of features or steps
-- Explain what you're building before showing code
-
-IMPORTANT: When generating a component, always name the main component "App" so it can be rendered in the live preview. Use only React, no imports (React is available globally). Use Tailwind CSS classes for styling. When updating existing code, provide the FULL updated component — do not use partial diffs. Example:
-\`\`\`tsx
-function App() {
-  const [count, setCount] = React.useState(0);
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold">Hello</h1>
-    </div>
-  );
-}
-\`\`\`
-
-Always respond as if you are actively building the app step by step.`;
+// System prompt is now handled server-side in the ai-generate edge function
+// No sensitive prompts are exposed to the client
 
 const FIXER_PROMPT = (error: string, code: string) =>
   `The following React component crashed with this runtime error:\n\nError: ${error}\n\nCode:\n\`\`\`tsx\n${code}\n\`\`\`\n\nFix the error and return the COMPLETE corrected component. Keep the same functionality. Name it "App".`;
