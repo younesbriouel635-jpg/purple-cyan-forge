@@ -46,6 +46,44 @@ export type Database = {
           },
         ]
       }
+      generation_idempotency: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          project_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          project_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          project_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_idempotency_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -111,6 +149,7 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
+          generated_code: string | null
           id: string
           name: string
           updated_at: string
@@ -118,6 +157,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          generated_code?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -125,6 +165,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          generated_code?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -173,7 +214,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      complete_generation: {
+        Args: { p_idempotency_key: string }
+        Returns: undefined
+      }
+      reserve_generation_credit: {
+        Args: {
+          p_idempotency_key: string
+          p_project_id?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
