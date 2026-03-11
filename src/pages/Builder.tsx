@@ -78,12 +78,12 @@ const Builder = () => {
   );
 
   const streamChat = useCallback(async (allMessages: Message[], currentProjectId?: string) => {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-chat`;
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-generate`;
 
-    const apiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...allMessages.map((m) => ({ role: m.role, content: m.content })),
-    ];
+    // Generate idempotency key to prevent double-billing
+    const idempotencyKey = `${currentProjectId || "new"}-${Date.now()}-${crypto.randomUUID()}`;
+
+    const apiMessages = allMessages.map((m) => ({ role: m.role, content: m.content }));
 
     const resp = await fetch(url, {
       method: "POST",
@@ -91,7 +91,11 @@ const Builder = () => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages: apiMessages }),
+      body: JSON.stringify({
+        messages: apiMessages,
+        idempotency_key: idempotencyKey,
+        project_id: currentProjectId || null,
+      }),
     });
 
     if (!resp.ok) {
